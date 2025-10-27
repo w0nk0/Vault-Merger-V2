@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from typing import List, Dict
 from config_manager import config_manager
 from file_scanner import file_scanner
 from collision_resolver import collision_resolver

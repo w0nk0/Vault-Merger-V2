@@ -1,0 +1,37 @@
+Analyzing links in vault: /tmp/_2/
+Using link mapping file: /tmp/_2/link_mapping.txt
+============================================================
+Links in mapping file: 3371
+Links pointing to existing files: 3369
+Links pointing to missing files: 2
+Unique targets found in markdown files: 7490
+
+BROKEN LINKS:
+  Source: UNLINKED
+  Target: files/dup-Unterlagen_ESt_2013_Einkommenssteuer_2013_Anlagen_.1.pdf
+  Line: UNLINKED ; files/dup-Unterlagen_ESt_2013_Einkommenssteuer_2013_Anlagen_.1.pdf ; 036e1a8cff7163f68a5d4c49d504577b
+
+  Source: UNLINKED
+  Target: files/dup-unknown_filename-c096bbe1.png
+  Line: UNLINKED ; files/dup-unknown_filename-c096bbe1.png ; 02e9a75546cae181d0286c79559daa2d
+
+
+TARGETS IN MARKDOWN NOT IN MAPPING FILE (7490):
+  ('93', 'http://www.buzer.de/gesetz/3415/a47654.htm')
+  ../files/A1068462.pdf
+  ('http://www.thomann.de/intl/the_tbone_sc450_usb.htm?sid=321f3b06805c579634a2fc3aac979cc5', '../files/unknown_filename-a2f1c38a.jpeg')
+  ('The Wall', 'http://www.rlcure.com/wall.html')
+  ../files/Picture.35.jpg
+  ('Permissions', 'https://www.mayoclinicproceedings.org/content/permission')
+  ../files/unknown_filename-8dc14c80.png
+  ('permalink', 'http://www.reddit.com/r/Neverwinter/comments/1e7wtu/tips_from_my_journey_to_level_60/c9xxdfe')
+  ('http://trws.flaschenpost.de/lnk/AWIAAB9XFpMAAci_TaoAAKz-nhIAAAAAPW4AAAAAAAzQVABkxVM1FUB1rrVZR06--yPAjWogzgAMSUM/1/_7UJZZwMirjeAG7IfjxI2g/aHR0cHM6Ly93d3cuZmxhc2NoZW5wb3N0LmRlP3Bsej02MDQ4NiZ1dG1fc291cmNlPW1haWxqZXRmcHRyaWdnZXImdXRtX21lZGl1bT10cmFuc2FrdGlvbnNtYWlsJnV0bV9jYW1wYWlnbj1GUF9TZXJ2aWNlX0ludm9pY2VfLV9DVl9TV19GTV9DQV9DQV9DQSZ1dG1fdGVybT1TZXJ2aWNlX0ludm9pY2UmUlhDQz0wJnJkcj0x', '../files/unknown_filename-02507106.png')
+  ('Google Scholar', 'https://scholar.google.com/scholar_lookup?title=Restless%20legs%20syndrome%20and%20Parkinson%20disease%3A%20a%20causal%20relationship%20between%20the%20two%20disorders')
+  ... and 7480 more
+
+============================================================
+SUMMARY
+============================================================
+⚠ 2 broken links found
+Vault contains 7490 unique link targets
+Mapping file contains 3371 unique targets

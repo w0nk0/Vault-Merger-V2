@@ -36,8 +36,10 @@ python main.py [source_paths]... -d [destination_path] [options]
 ### Options
 
 - `-f, --file-types`: File types to include (default: .md)
-- `--flatten`: Flatten directory structure instead of preserving it
-- `--include-dot-folders`: Include dot-prefixed folders (default: exclude)
+- `--flatten, -l`: Flatten directory structure instead of preserving it
+- `--include-dot-folders, -i`: Include dot-prefixed folders (default: exclude)
+- `--hash-all-files, -a`: Calculate hash numbers for all files in the vault and add them to the link mapping file
+- `--analyze-only, -o`: Analyze existing vault for links and hashes without merging (requires single vault path)
 
 ### Examples
 
@@ -54,6 +56,11 @@ python main.py /path/to/vault1 /path/to/vault2 -d /path/to/merged_vault -f .md .
 Merge vaults and flatten directory structure:
 ```
 python main.py /path/to/vault1 /path/to/vault2 -d /path/to/merged_vault --flatten
+```
+
+Analyze an existing vault for links and hashes (always calculates hashes for all files):
+```
+python main.py /path/to/existing_vault --analyze-only
 ```
 
 ## How It Works

@@ -41,7 +41,8 @@ def count_duplicate_hashes(file_path):
 
 
 if __name__ == "__main__":
-    file_path = "MERGED14-25/link_mapping.txt"
+    import sys
+    file_path = sys.argv[1]
     
     try:
         duplicate_hashes, duplicate_instances, valid_entries, unique_hashes = count_duplicate_hashes(file_path)

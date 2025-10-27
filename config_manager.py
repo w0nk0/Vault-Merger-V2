@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import List, Optional
+from typing import List
 
 
 class ConfigManager:
@@ -17,6 +17,7 @@ class ConfigManager:
         self.exclude_dot_folders: bool = True
         self.preserve_folder_structure: bool = True
         self.hash_all_files: bool = False
+        self.analyze_only: bool = False
 
     def parse_arguments(self) -> None:
         """
@@ -33,8 +34,8 @@ class ConfigManager:
         )
         parser.add_argument(
             "-d", "--destination",
-            required=True,
-            help="Path to destination vault"
+            required=False,
+            help="Path to destination vault (not required when using --analyze-only)"
         )
         parser.add_argument(
             "-f", "--file-types",
@@ -43,28 +44,41 @@ class ConfigManager:
             help="File types to include (default: all files)"
         )
         parser.add_argument(
-            "--flatten",
+            "--flatten", "-l",
             action="store_true",
             help="Flatten directory structure instead of preserving it"
         )
         parser.add_argument(
-            "--include-dot-folders",
+            "--include-dot-folders", "-i",
             action="store_true",
             help="Include dot-prefixed folders (default: exclude)"
         )
         parser.add_argument(
-            "--hash-all-files",
-            action="store_true",
+            "--hash-all-files", "-a",
+            action="store_true", default=True,
             help="Calculate hash numbers for all files in the vault and add them to the link mapping file"
+        )
+        parser.add_argument(
+            "--analyze-only", "-o",
+            action="store_true",
+            help="Analyze existing vault for links and hashes without merging (requires single vault path as both source and destination)"
+        )
+        parser.add_argument(
+            "--linkmap-only", "-L",
+            action="store_true",
+            help="Only generate the link mapping file. (We'll use destination or source Vault Path .)"
         )
 
         args = parser.parse_args()
+        self.only_linkmapping = args.linkmap_only
+
         self.source_paths = args.source_paths
         self.destination_path = args.destination
         self.file_types = args.file_types
         self.preserve_folder_structure = not args.flatten
         self.exclude_dot_folders = not args.include_dot_folders
         self.hash_all_files = args.hash_all_files
+        self.analyze_only = args.analyze_only
 
     def validate_paths(self) -> None:
         """
@@ -78,9 +92,14 @@ class ConfigManager:
             if not os.path.isdir(path):
                 raise ValueError(f"Source path is not a directory: {path}")
 
-        # Validate destination path
-        if not self.destination_path:
-            raise ValueError("Destination path is required")
+        #if self.hash_all_files and not self.destination_path:
+        #    if len(self.source_paths)==1:
+        #        self.destination_path = path
+        
+        # Validate destination path (only required if not in analyze-only mode)
+        if not self.destination_path and not self.analyze_only:
+            print("No destination path but not in Analyze Only mode. ")
+        #    raise ValueError("Destination path is required")
 
         # Create destination directory if it doesn't exist
         os.makedirs(self.destination_path, exist_ok=True)
@@ -97,6 +116,7 @@ class ConfigManager:
         summary += f"  File types: {', '.join(self.file_types)}\n"
         summary += f"  Preserve folder structure: {self.preserve_folder_structure}\n"
         summary += f"  Exclude dot folders: {self.exclude_dot_folders}\n"
+        summary += f"  Analyze only mode: {self.analyze_only}\n"
         return summary
 
 

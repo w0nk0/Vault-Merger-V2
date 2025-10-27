@@ -53,16 +53,16 @@ def parse_link_mapping(file_path: str) -> Dict[str, List[str]]:
                 if not line:
                     continue
                 
-                # Split line into file path and metadata
-                parts = line.split(' <- ')
-                if len(parts) < 2:
-                    continue
-                
-                file_path_part = parts[0].strip()
-                hash_code = extract_hash_from_path(file_path_part)
-                
-                if hash_code:
-                    hash_to_paths[hash_code].append(file_path_part)
+                # Parse format: "SOURCE ; TARGET ; HASH"
+                parts = line.split(' ; ')
+                if len(parts) >= 3:
+                    source_file = parts[0].strip()
+                    target_file = parts[1].strip()
+                    file_hash = parts[2].strip()
+                    
+                    # Use the hash from the link mapping file instead of extracting from path
+                    if file_hash and file_hash != "ERROR" and file_hash != "NOT_FOUND":
+                        hash_to_paths[file_hash].append(target_file)
                     
     except FileNotFoundError:
         print(f"Error: File {file_path} not found.")

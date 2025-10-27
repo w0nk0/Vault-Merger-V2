@@ -1,0 +1,27 @@
+Analyzing links in vault: MERGED14-23/
+Using link mapping file: MERGED14-23/link_mapping.txt
+============================================================
+Links in mapping file: 3371
+Links pointing to existing files: 3371
+Links pointing to missing files: 0
+Unique targets found in markdown files: 7490
+
+TARGETS IN MARKDOWN NOT IN MAPPING FILE (7490):
+  ('10.2165/00003088-198510060-00002', 'https://doi.org/10.2165%2F00003088-198510060-00002')
+  ('Umbuchen', 'https://www.condor.com/tcibe/de/mybooking/login?utm_medium=email_system&utm_source=condor_gambit&utm_campaign=booking_confirmation&utm_term=link_rebook&utm_content=Confirmation')
+  ('oxidized', 'https://en.wikipedia.org/wiki/Oxidized')
+  ('https://www.alternate.de', '../files/unknown_filename-08cb2d60.jpeg')
+  ('El Club de la Hamburguesa', 'http://www.elclubdelahamburguesa.com/')
+  ('b', 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2518382/#b76')
+  ('http://forum.cockos.com/newreply.php?s=6b8879b588a89ead322435371085baad&do=newreply&p=975398', '../files/unknown_filename-d1cc2a4e.gif')
+  ../files/unknown_filename-90a76d67.png
+  ('Guttman et al 2001', 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2518382/#b31')
+  ../files/ScreenClip.34.png
+  ... and 7480 more
+
+============================================================
+SUMMARY
+============================================================
+✓ All links in mapping file point to existing files
+Vault contains 7490 unique link targets
+Mapping file contains 3371 unique targets
