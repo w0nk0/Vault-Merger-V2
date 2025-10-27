@@ -1,0 +1,10 @@
+[project]
+name = "obsidian-vault-merger"
+version = "0.1.0"
+description = "A tool to merge multiple Obsidian vaults into a single vault"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+obsidian-merger = "main:main"
