@@ -16,8 +16,13 @@ class ConfigManager:
         self.file_types: List[str] = []
         self.exclude_dot_folders: bool = True
         self.preserve_folder_structure: bool = True
-        self.hash_all_files: bool = False
+        self.hash_all_files: bool = True  # Default: ON
         self.analyze_only: bool = False
+        self.deduplicate_files: bool = False
+        self.deduplicate_test_mode: bool = False
+        self.deduplicate_max_groups: int = 3
+        self.deduplicate_rename_mode: bool = True
+        self.deduplicate_delete_mode: bool = False
 
     def parse_arguments(self) -> None:
         """
@@ -55,8 +60,15 @@ class ConfigManager:
         )
         parser.add_argument(
             "--hash-all-files", "-a",
-            action="store_true", default=True,
-            help="Calculate hash numbers for all files in the vault and add them to the link mapping file"
+            action="store_true", default=None,
+            help="Calculate hash numbers for all files in the vault and add them to the link mapping file (default: enabled)"
+        )
+        parser.add_argument(
+            "--no-hash-files",
+            dest="hash_all_files",
+            action="store_false",
+            default=None,
+            help="Disable hash calculation for all files"
         )
         parser.add_argument(
             "--analyze-only", "-o",
@@ -68,6 +80,32 @@ class ConfigManager:
             action="store_true",
             help="Only generate the link mapping file. (We'll use destination or source Vault Path .)"
         )
+        parser.add_argument(
+            "--deduplicate", "-D",
+            action="store_true",
+            help="Enable deduplication of files with identical content based on hash values"
+        )
+        parser.add_argument(
+            "--dedup-test", 
+            action="store_true",
+            help="Run deduplication in test mode (process only first few groups)"
+        )
+        parser.add_argument(
+            "--dedup-max-groups",
+            type=int,
+            default=3,
+            help="Maximum number of duplicate groups to process in test mode (default: 3)"
+        )
+        parser.add_argument(
+            "--dedup-no-rename",
+            action="store_true",
+            help="Disable renaming of non-surviving duplicates"
+        )
+        parser.add_argument(
+            "--dedup-delete",
+            action="store_true",
+            help="Delete duplicate files after relinking (instead of renaming with dup- prefix)"
+        )
 
         args = parser.parse_args()
         self.only_linkmapping = args.linkmap_only
@@ -77,8 +115,14 @@ class ConfigManager:
         self.file_types = args.file_types
         self.preserve_folder_structure = not args.flatten
         self.exclude_dot_folders = not args.include_dot_folders
-        self.hash_all_files = args.hash_all_files
+        # hash_all_files: default True, can be overridden by --hash-all-files or --no-hash-files
+        self.hash_all_files = args.hash_all_files if args.hash_all_files is not None else True
         self.analyze_only = args.analyze_only
+        self.deduplicate_files = args.deduplicate
+        self.deduplicate_test_mode = args.dedup_test
+        self.deduplicate_max_groups = args.dedup_max_groups
+        self.deduplicate_rename_mode = not args.dedup_no_rename
+        self.deduplicate_delete_mode = args.dedup_delete
 
     def validate_paths(self) -> None:
         """
@@ -116,7 +160,13 @@ class ConfigManager:
         summary += f"  File types: {', '.join(self.file_types)}\n"
         summary += f"  Preserve folder structure: {self.preserve_folder_structure}\n"
         summary += f"  Exclude dot folders: {self.exclude_dot_folders}\n"
+        summary += f"  Hash all files: {self.hash_all_files}\n"
         summary += f"  Analyze only mode: {self.analyze_only}\n"
+        summary += f"  Deduplicate files: {self.deduplicate_files}\n"
+        if self.deduplicate_files:
+            summary += f"    Test mode: {self.deduplicate_test_mode}\n"
+            summary += f"    Max groups: {self.deduplicate_max_groups}\n"
+            summary += f"    Rename mode: {self.deduplicate_rename_mode}\n"
         return summary
 
 

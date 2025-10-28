@@ -31,7 +31,7 @@ graph TD
 
 3. **Collision Resolver**
    - Implements filename collision resolution strategy
-   - Renames files with collisions using #1, #2, #3 pattern
+   - Renames files with collisions using ~1, ~2, ~3 pattern
    - Maintains rename log for link updating
 
 4. **File Copier**
@@ -125,7 +125,7 @@ graph TD
 ### Collision Resolution Strategy
 - First file encountered keeps its original name
 - Subsequent files with the same name are renamed with sequential numbers
-- Pattern: `filename#1.extension`, `filename#2.extension`, etc.
+- Pattern: `filename~1.extension`, `filename~2.extension`, etc.
 - All links pointing to renamed files are updated accordingly
 
 ### Link Detection and Updating

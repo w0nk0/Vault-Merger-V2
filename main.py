@@ -12,6 +12,7 @@ from collision_resolver import collision_resolver
 from file_copier import file_copier
 from link_processor import link_processor
 from report_generator import report_generator
+from deduplication_handler import deduplication_handler
 from logger import logger
 
 
@@ -59,6 +60,14 @@ def main():
                 link_processor.process_links()
 
             logger.info("Link analysis completed successfully!")
+            
+            # Run deduplication if enabled
+            if config_manager.deduplicate_files:
+                logger.info("=== Deduplication ===")
+                deduplication_handler.initialize()
+                deduplication_handler.process_duplicates()
+                logger.info("Deduplication report generated at deduplication_report.html")
+            
             return
         
         # Normal merging mode
@@ -94,6 +103,18 @@ def main():
         # Phase 5: Report Generation
         logger.info("=== Phase 5: Report Generation ===")
         report_generator.generate_merge_report()
+        
+        # Phase 6: Deduplication (if enabled)
+        if config_manager.deduplicate_files:
+            logger.info("=== Phase 6: Deduplication ===")
+            
+            # Initialize the deduplication handler
+            deduplication_handler.initialize()
+            
+            # Process duplicates
+            deduplication_handler.process_duplicates()
+            
+            logger.info("Deduplication report generated at deduplication_report.html")
         
         logger.info("Vault merging completed successfully!")
         

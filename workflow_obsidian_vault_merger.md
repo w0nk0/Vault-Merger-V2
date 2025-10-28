@@ -11,7 +11,7 @@ graph TD
     E --> F[Create Link Mapping File]
     F --> G[Copy Files to Destination Vault]
     G --> H{Filename Collision?}
-    H -->|Yes| I[Rename File with #1, #2, etc.]
+    H -->|Yes| I[Rename File with ~1, ~2, etc.]
     H -->|No| J[Preserve Original Filename]
     I --> K[Log File Rename]
     J --> K

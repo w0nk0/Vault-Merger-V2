@@ -7,7 +7,7 @@ from logger import logger
 class CollisionResolver:
     """
     Implements filename collision resolution strategy.
-    Renames files with collisions using #1, #2, #3 pattern.
+    Renames files with collisions using ~1, ~2, ~3 pattern.
     Maintains rename log for link updating.
     """
 
@@ -70,12 +70,12 @@ class CollisionResolver:
         # Subsequent files are renamed with sequential numbers
         for i, file_info in enumerate(files[1:], start=1):
             name, ext = os.path.splitext(original_filename)
-            new_filename = f"{name}#{i}{ext}"
+            new_filename = f"{name}~{i}{ext}"
             
             # Check if the generated filename already exists and generate a unique one
             counter = 1
             while new_filename in all_filenames:
-                new_filename = f"{name}#{i}_{counter}{ext}"
+                new_filename = f"{name}~{i}~{counter}{ext}"
                 counter += 1
             
             # Add the new filename to the used set

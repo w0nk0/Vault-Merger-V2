@@ -299,7 +299,7 @@ class LinkProcessor:
                         f.write(f"unknown ; {mapping} ; ERROR\n")
                 
                 # If hash_all_files option is enabled OR we're in analyze-only mode, hash all other files in the vault
-                if True: #config_manager.hash_all_files or config_manager.analyze_only:
+                if config_manager.hash_all_files or config_manager.analyze_only:
                     # Get all files in the vault
                     all_files = []
                     for root, dirs, files in os.walk(config_manager.destination_path):

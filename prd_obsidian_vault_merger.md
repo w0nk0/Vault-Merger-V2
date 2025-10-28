@@ -13,7 +13,7 @@ The tool will combine multiple Obsidian vaults, handle filename collisions, pres
 ### 2.1 Primary Objectives
 - Merge multiple Obsidian vaults into a single destination vault
 - Preserve original folder structures from source vaults
-- Handle filename collisions by appending sequential numbers (#1, #2, etc.) so that file.md --> file#1.md
+- Handle filename collisions by appending sequential numbers (~1, ~2, etc.) so that file.md --> file~1.md
 - Map and update all internal links to reflect renamed files
 - Ignore dot-prefixed folders (e.g., .git, .obsidian) during merging
 
@@ -36,7 +36,7 @@ The tool will combine multiple Obsidian vaults, handle filename collisions, pres
 - Traverse all subdirectories in source vaults
 - Skip any folders starting with a dot (.)
 - Identify all files with potential name collisions
-- Rename files with collisions using #1, #2, #3 pattern
+- Rename files with collisions using ~1, ~2, ~3 pattern
 - Preserve file content and modification times where possible
 
 ### 3.3 Link Processing Requirements
@@ -78,14 +78,14 @@ The tool will combine multiple Obsidian vaults, handle filename collisions, pres
 When two or more files have the same name (including extension):
 1. The first file encountered keeps its original name
 2. Subsequent files with the same name are renamed with a sequential number
-3. Pattern: `filename#1.extension`, `filename#2.extension`, etc.
+3. Pattern: `filename~1.extension`, `filename~2.extension`, etc.
 4. All links pointing to renamed files are updated accordingly
 
 Example:
 - Source Vault 1: `note.md`
 - Source Vault 2: `note.md`
-- Result: `note.md` and `note#1.md`
-- All links to the second note are updated to point to `note#1.md`
+- Result: `note.md` and `note~1.md`
+- All links to the second note are updated to point to `note~1.md`
 
 ## 6. Link Mapping and Updating Process
 
