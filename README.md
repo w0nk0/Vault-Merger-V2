@@ -95,6 +95,20 @@ Test deduplication on a merged vault with limited groups:
 python main.py /path/to/merged --analyze-only --deduplicate --dedup-test --dedup-max-groups 5
 ```
 
+### Clean Up Deduplicated Files
+
+After deduplication, you may want to permanently delete the duplicate files that were renamed with the `dup-` prefix. A cleanup script is provided for this purpose:
+
+```bash
+# To delete all files starting with 'dup-' in a specific vault
+./delete_deduped_from_vault.sh /path/to/vault
+
+# To delete all files starting with 'dup-' in the current directory
+./delete_deduped_from_vault.sh
+```
+
+The script will ask for confirmation before deleting any files. This is useful for permanently removing duplicate files that were preserved during the deduplication process.
+
 ## Usage
 
 ```
