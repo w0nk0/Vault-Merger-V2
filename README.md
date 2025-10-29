@@ -2,6 +2,65 @@
 
 A tool to merge multiple Obsidian vaults into a single vault while preserving file integrity and maintaining internal link consistency.
 
+## Quick Start
+
+**Merge vaults:**
+```bash
+./RUN-merge.sh vault1 vault2 merged_output
+```
+
+**Merge with deduplication:**
+```bash
+./RUN-merge-dedup.sh vault1 vault2 merged_output
+```
+
+**Web interface:**
+```bash
+./RUN-web.sh
+```
+
+**Analyze existing vault:**
+```bash
+./RUN-analyze.sh existing_vault
+```
+
+**Deduplicate existing vault:**
+```bash
+./RUN-dedup.sh existing_vault
+```
+
+See [RUN-*.sh scripts](#run-scripts) section for details.
+
+## RUN Scripts
+
+Quick-start shell scripts for common tasks:
+
+- **`RUN-merge.sh`** - Basic merge of multiple vaults
+  ```bash
+  ./RUN-merge.sh vault1 vault2 merged_output
+  ```
+
+- **`RUN-merge-dedup.sh`** - Merge with deduplication enabled
+  ```bash
+  ./RUN-merge-dedup.sh vault1 vault2 merged_output
+  ```
+
+- **`RUN-web.sh`** - Launch Gradio web interface
+  ```bash
+  ./RUN-web.sh
+  ```
+  Access at `http://localhost:7860`
+
+- **`RUN-analyze.sh`** - Analyze existing vault for links and hashes
+  ```bash
+  ./RUN-analyze.sh existing_vault
+  ```
+
+- **`RUN-dedup.sh`** - Deduplicate an existing merged vault
+  ```bash
+  ./RUN-dedup.sh merged_vault
+  ```
+
 ## Features
 
 - Merge multiple Obsidian vaults into a single destination vault

@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ocr_vlm"
+version = "0.1.0"
+description = "OCR project using Vision Language Models with Transformers"
+authors = [
+    {name = "OCR Project Team"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "transformers>=4.36.0",
+    "torch>=2.0.0",
+    "pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "opencv-python>=4.8.0",
+    "pyyaml>=6.0",
+    "pandas>=2.0.0",
+    "tqdm>=4.65.0",
+    "click>=8.1.0",
+    "llama-cpp-python>=0.2.0",  # For GGUF model support
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+ocr-vlm = "ocr_project.main:main"
+
+[project.urls]
+Homepage = "https://github.com/your-org/ocr-gemma3"
+Repository = "https://github.com/your-org/ocr-gemma3"
+Issues = "https://github.com/your-org/ocr-gemma3/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ocr_project"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=ocr_project --cov-report=html --cov-report=term-missing"

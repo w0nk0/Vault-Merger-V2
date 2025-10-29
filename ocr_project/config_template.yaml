@@ -1,0 +1,46 @@
+# OCR Project Configuration Template
+
+# Model Configuration
+model_name: "google/gemma-3-13b-it"  # Vision Language Model compatible with Transformers, 13B is closest to 12B
+model_path: ""  # Path to GGUF model file (e.g., "./models/gemma-3-13b-it.gguf")
+model_format: "transformers"  # "transformers" or "gguf"
+dtype: "bfloat16"  # or "float16" or "float32" depending on hardware
+device: "cuda"  # or "cpu" or "mps" (depending on your system)
+attn_implementation: "sdpa"  # or "flash_attention_2" if available
+quantization_config: null  # Use TorchAoConfig("int4_weight_only", group_size=128) for quantization
+
+# OCR Parameters
+temperature: 0.1
+max_new_tokens: 1024  # Increased for longer text extraction
+do_sample: false
+
+# Image Processing
+image_resize_width: 1024
+image_resize_height: 1024
+contrast_enhancement: true
+noise_reduction: true
+do_pan_and_scan: true  # Enable for high-resolution images
+
+# Hash and Duplicate Detection
+hash_algorithm: "sha256"
+hash_length: 8  # Fixed at 8 characters as per RULES.md
+enable_duplicate_check: true
+ocr_lock_file: "ocr_processing_log.md"
+filename_format: "{original_name}_OCR_{hash}.md"  # Format with OCR_ prefix
+
+# CSV Tracking (as per RULES.md)
+csv_tracking_enabled: true
+csv_filename: "ocr_results.csv"
+csv_path: "."  # Relative to vault main directory
+
+# Output
+output_format: "markdown"  # or "json"
+output_directory: "./ocr_output"  # Relative to vault main directory
+
+# Processing
+batch_size: 1  # Number of images to process simultaneously
+max_workers: 4  # Maximum number of worker threads for batch processing
+
+# Logging
+log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+log_file: "ocr_processing.log"  # Optional log file for technical logs
