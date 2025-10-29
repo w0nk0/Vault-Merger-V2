@@ -34,3 +34,6 @@ uv.lock
 TOUCHPAD_DETECTION_README.md
 detect_input_devices.sh
 essential_touchpad_detect.sh
+
+# Old work archive
+old_work_from_last_night/
