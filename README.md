@@ -29,38 +29,6 @@ A tool to merge multiple Obsidian vaults into a single vault while preserving fi
 ./RUN-dedup.sh existing_vault
 ```
 
-See [RUN-*.sh scripts](#run-scripts) section for details.
-
-## RUN Scripts
-
-Quick-start shell scripts for common tasks:
-
-- **`RUN-merge.sh`** - Basic merge of multiple vaults
-  ```bash
-  ./RUN-merge.sh vault1 vault2 merged_output
-  ```
-
-- **`RUN-merge-dedup.sh`** - Merge with deduplication enabled
-  ```bash
-  ./RUN-merge-dedup.sh vault1 vault2 merged_output
-  ```
-
-- **`RUN-web.sh`** - Launch Gradio web interface
-  ```bash
-  ./RUN-web.sh
-  ```
-  Access at `http://localhost:7860`
-
-- **`RUN-analyze.sh`** - Analyze existing vault for links and hashes
-  ```bash
-  ./RUN-analyze.sh existing_vault
-  ```
-
-- **`RUN-dedup.sh`** - Deduplicate an existing merged vault
-  ```bash
-  ./RUN-dedup.sh merged_vault
-  ```
-
 ## Features
 
 - Merge multiple Obsidian vaults into a single destination vault
@@ -81,22 +49,6 @@ Quick-start shell scripts for common tasks:
    ```
    uv sync
    ```
-
-## Web Interface
-
-Launch a beautiful Gradio web interface:
-
-```bash
-python web_interface.py
-```
-
-Access the interface at `http://localhost:7860`
-
-The web interface provides:
-- Visual configuration of all options
-- Real-time progress tracking
-- Inline HTML report viewing
-- User-friendly form inputs
 
 ## Common Workflows
 
