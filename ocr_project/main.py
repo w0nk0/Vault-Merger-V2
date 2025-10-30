@@ -14,6 +14,7 @@ Features:
 import argparse
 import sys
 import os
+import json
 from pathlib import Path
 
 # Hardcoded defaults per v0.1 spec
@@ -53,6 +54,12 @@ def parse_arguments():
         type=str,
         default=None,
         help=f"Custom OCR prompt (default: '{DEFAULT_PROMPT}')"
+    )
+    parser.add_argument(
+        "--template",
+        type=str,
+        default=None,
+        help="Path to JSON schema template file for structured extraction"
     )
     
     return parser.parse_args()
@@ -96,8 +103,26 @@ def main():
     model_format = _detect_model_format(args.model)
     print(f"Detected model format: {model_format}")
     
+    # Handle JSON template if provided
+    json_template = None
+    if args.template:
+        try:
+            from json_template_handler import JSONTemplateHandler
+        except ImportError:
+            try:
+                from ocr_project.json_template_handler import JSONTemplateHandler
+            except ImportError:
+                raise ImportError("Cannot import JSONTemplateHandler. Make sure json_template_handler.py exists.")
+        
+        json_template = JSONTemplateHandler(args.template)
+        print(f"✓ Using JSON template: {args.template}")
+    
     # Use custom prompt if provided, otherwise use default
     ocr_prompt = args.prompt if args.prompt else DEFAULT_PROMPT
+    
+    # Generate structured prompt if template is provided
+    if json_template:
+        ocr_prompt = json_template.generate_prompt(ocr_prompt)
     
     # Validate inputs
     input_path = Path(args.input)
@@ -361,38 +386,76 @@ Extracted text:
                 print(f"  ⚠️  Warning: Failed to generate summary: {str(e)}")
                 # Continue without summary
         
-        # Clean up extracted text
-        try:
-            # Basic cleanup: Remove trailing garbage patterns
-            # Remove long sequences of repeated characters (e.g., "|  |  |  |  |")
-            import re
-            # Remove lines with only pipes/spaces (garbage patterns)
-            lines = extracted_text.split('\n')
-            cleaned_lines = []
-            for line in lines:
-                # Skip lines that are mostly pipe characters or whitespace
-                if line.strip() and not re.match(r'^[\|\s\|]+$', line.strip()):
-                    cleaned_lines.append(line)
-            extracted_text = '\n'.join(cleaned_lines).strip()
+        # Handle JSON template extraction if provided
+        is_json_mode = json_template is not None
+        json_data = None
+        
+        if is_json_mode:
+            print("Extracting JSON from output...")
+            json_data = json_template.extract_json(extracted_text)
             
-        except Exception as e:
-            # Text extraction failure - log and skip
-            error_msg = f"Text extraction failed: {str(e)}"
-            print(f"\n❌ ERROR: {error_msg}", file=sys.stderr)
-            processing_log.log_error(str(input_path), "Text Extraction Error", error_msg)
-            sys.exit(1)
+            if json_data:
+                print("  ✓ JSON extracted successfully")
+                
+                # Validate JSON against schema
+                is_valid, error_msg = json_template.validate(json_data)
+                
+                if is_valid:
+                    print("  ✅ JSON validated against schema")
+                else:
+                    print(f"  ⚠️  JSON validation warning: {error_msg}")
+                    print("  Continuing anyway...")
+            else:
+                print("  ⚠️  Failed to extract JSON, falling back to plain text")
+                is_json_mode = False
+        
+        # Clean up extracted text (only for non-JSON mode)
+        if not is_json_mode:
+            try:
+                # Basic cleanup: Remove trailing garbage patterns
+                # Remove long sequences of repeated characters (e.g., "|  |  |  |  |")
+                import re
+                # Remove lines with only pipes/spaces (garbage patterns)
+                lines = extracted_text.split('\n')
+                cleaned_lines = []
+                for line in lines:
+                    # Skip lines that are mostly pipe characters or whitespace
+                    if line.strip() and not re.match(r'^[\|\s\|]+$', line.strip()):
+                        cleaned_lines.append(line)
+                extracted_text = '\n'.join(cleaned_lines).strip()
+                
+            except Exception as e:
+                # Text extraction failure - log and skip
+                error_msg = f"Text extraction failed: {str(e)}"
+                print(f"\n❌ ERROR: {error_msg}", file=sys.stderr)
+                processing_log.log_error(str(input_path), "Text Extraction Error", error_msg)
+                sys.exit(1)
         
         # v0.2: Generate output filename with hash
         input_stem = input_path.stem
-        output_filename = f"{input_stem}_OCR_{image_hash}.md"
-        output_path = output_dir / output_filename
+        if is_json_mode and json_data:
+            # Use JSON extension for structured output
+            output_filename = f"{input_stem}_OCR_{image_hash}.json"
+            output_path = output_dir / output_filename
+            
+            # Format and save JSON
+            output_content = json_template.format_output(json_data)
+        else:
+            # Use markdown extension for plain text
+            output_filename = f"{input_stem}_OCR_{image_hash}.md"
+            output_path = output_dir / output_filename
+            output_content = extracted_text
         
         # Save to file
         with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(extracted_text)
+            f.write(output_content)
         
         # v0.2: Track in CSV
-        summary = extracted_text[:100].replace('\n', ' ') if extracted_text else ""
+        if is_json_mode and json_data:
+            # For JSON output, use title or summary field
+            summary = json_data.get('title', json_data.get('summary', ''))[:100] if isinstance(json_data, dict) else ""
+        else:
+            summary = extracted_text[:100].replace('\n', ' ') if extracted_text else ""
         csv_tracker.add_entry(image_hash, str(input_path), summary)
         
         # v0.2: Log successful processing
@@ -402,9 +465,15 @@ Extracted text:
         print(f"📄 Output saved to: {output_path}")
         print(f"📊 Tracked in CSV: {csv_tracker.csv_path}")
         print(f"📝 Logged to: {processing_log.log_path}")
-        print(f"\n📝 Extracted text:\n{'-' * 60}")
-        print(extracted_text)
-        print(f"{'-' * 60}\n")
+        
+        if is_json_mode and json_data:
+            print(f"\n📋 Extracted JSON:\n{'-' * 60}")
+            print(json.dumps(json_data, indent=2, ensure_ascii=False))
+            print(f"{'-' * 60}\n")
+        else:
+            print(f"\n📝 Extracted text:\n{'-' * 60}")
+            print(extracted_text)
+            print(f"{'-' * 60}\n")
         
     except Exception as e:
         print(f"\n❌ ERROR: {str(e)}", file=sys.stderr)
