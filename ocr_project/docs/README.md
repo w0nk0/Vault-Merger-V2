@@ -6,6 +6,12 @@ This project implements OCR functionality using Vision Language Models (VLMs) th
 
 **Before using or contributing to this project, please read [RULES.md](RULES.md) file** which contains essential guidelines.
 
+**For open issues requiring decisions, see [ISSUES.md](ISSUES.md).**
+
+**For resolved decisions and specifications, see [DECISIONS.md](DECISIONS.md).**
+
+**For development roadmap and version milestones, see [ROADMAP.md](ROADMAP.md).**
+
 ## Architecture
 
 - `main.py`: Main application entry point
@@ -18,7 +24,7 @@ This project implements OCR functionality using Vision Language Models (VLMs) th
 
 - Extract text from scanned document images using Vision Language Models
 - Support for various VLMs compatible with Hugging Face Transformers
-- Current model: Google Gemma 3-13b-it (instruction-tuned)
+- Current model: Google Gemma 3-12b-it (instruction-tuned)
 - GGUF format support for efficient local model inference
 - Hash-based duplicate detection to avoid reprocessing identical images
 - CSV tracking system with hash, filename, and document summary

@@ -1,0 +1,695 @@
+# OCR Project - Gaps, Optimizations, and Improvements Analysis
+
+## Executive Summary
+
+After reviewing the OCR project architecture, documentation, and planned features, this document identifies critical gaps, potential errors, omissions, and optimization opportunities. The analysis covers technical implementation concerns, architecture improvements, and strategic considerations for making this project production-ready.
+
+## Issue Index
+
+| Issue # | Title | Category | Priority |
+|---------|-------|----------|----------|
+| #1 | Missing Integration with Vault Merger | Critical | Deferred (v0.5) |
+| #2 | Hash-Based Duplicate Detection Logic | Critical | v0.2 |
+| #3 | Error Handling Strategy | Major Omission | Critical |
+| #4 | Logging and Observability | Major Omission | High |
+| #5 | Testing Strategy Missing | Major Omission | High |
+| #6 | PDF Processing Details Missing | Major Omission | Post v0.1 Testing |
+| #7 | Concurrent Processing Strategy | Major Omission | Medium |
+| #8 | Configuration Validation Missing | Major Omission | High |
+| #9 | Model Loading Optimization | Optimization | Medium |
+| #10 | Image Preprocessing Pipeline Optimization | Optimization | Medium |
+| #11 | Result Caching Strategy | Optimization | Low |
+| #12 | Memory Management | Optimization | Medium |
+| #13 | Prompt Engineering for OCR | Optimization | High |
+| #14 | Output Quality and Validation | Optimization | Medium |
+| #15 | Pan-and-Scan Implementation Details | Optimization | Low |
+| #16 | CSV Tracking Optimization | Optimization | Low |
+| #17 | Input Validation and Security | Security | High |
+| #18 | Model Security | Security | Medium |
+| #19 | Setup Instructions Missing | Documentation | High |
+| #20 | Usage Examples Missing | Documentation | High |
+| #21 | Configuration Documentation | Documentation | Medium |
+| #22 | Separation of Concerns | Architecture | Medium |
+| #23 | Dependency Injection | Architecture | Low |
+| #24 | Result Format Extensibility | Architecture | Low |
+| #25 | Batch Processing Strategy | Performance | Medium |
+| #26 | Progress Reporting | Performance | Medium |
+| #27 | Vault Merger Integration Design | Integration | Deferred (v0.5) |
+| #28 | Error Recovery Integration | Integration | Deferred (v0.5) |
+| #29 | Image Metadata Preservation | Missing Feature | Low |
+| #30 | Language Detection | Missing Feature | Low |
+| #31 | Structured Text Extraction | Missing Feature | Low |
+
+---
+
+## Critical Issues & Errors
+
+### Issue #1: Missing Integration with Vault Merger
+
+**STATUS**: 📋 **DEFERRED** - Planned for v0.5 per roadmap
+
+**Recommendation** (for v0.5 implementation):
+- Define integration API:
+  - Function: `process_vault_images(vault_path, config_path=None)`
+  - Return format: List of processed markdown files with metadata
+- Add OCR processing phase to vault merger workflow:
+  - Scan vault for image files
+  - Process images through OCR
+  - Create markdown files with `{image_name}_OCR_{hash}.md` format
+  - Update link mapping to include OCR-generated files
+- Consider adding OCR option flag: `--process-images` or `--ocr`
+
+**Note**: Following incremental development approach - integration comes after core OCR functionality is proven.
+
+### Issue #2: Hash-Based Duplicate Detection Logic
+
+**Current Requirement** (per user specification):
+- When processing an image, calculate its hash
+- Check if that hash appears in any existing filename in the vault
+- If hash found in filename, determine if it's an OCR-generated file:
+  - **If filename contains OCR results** (e.g., `*_OCR_{hash}.md` pattern):
+    - Skip OCR processing for this image
+    - Log: "Skipped {image_path}: Hash {hash} already exists in OCR file {existing_file}"
+  - **If hash exists in non-OCR filename**:
+    - Continue with OCR processing (hash collision or unrelated file)
+    - Log: "Processing {image_path}: Hash {hash} found in non-OCR file {existing_file}, continuing"
+- Store all hash detections in processing log for audit trail
+
+**Implementation Requirements**:
+- Detect OCR file pattern: `{original_name}_OCR_{hash}.md` or similar
+- Check filename for hash substring (8 characters per RULES.md)
+- Log both scenarios with clear distinction
+- Continue processing even if hash found in non-OCR file (don't skip)
+
+**Additional Considerations**:
+- Hash collision handling (different images, same hash - extremely rare but possible)
+- Content verification option (compare actual file contents for exact match)
+- Force re-processing flag (override hash detection)
+
+---
+
+## Major Omissions
+
+### Issue #3: Error Handling Strategy
+
+**STATUS**: ✅ **RESOLVED** - Strategy defined per user specification
+
+**Error Handling Strategy** (per user specification):
+
+**Fatal Errors (Abort Entire Process)**:
+- **Model loading failure**: If model cannot be loaded, abort entire process immediately
+  - Log error: "FATAL: Model loading failed - {error_details}. Aborting process."
+  - Exit with error code
+  - Do not attempt to process any images
+
+**Recoverable Errors (Continue Processing)**:
+- **Corrupted image file**: If single image is corrupted, skip only that image
+  - Log error: "ERROR: Image {filename} is corrupted - {error_details}. Skipping this image."
+  - Continue processing remaining images
+  - Record skipped image in processing log with reason
+
+**Fallback Strategy** (for all recoverable errors):
+- Implement fallback mechanisms where possible:
+  - **Inference timeout**: Retry with shorter max_tokens or reduced batch size
+  - **Memory exhaustion**: Fallback to CPU processing or reduce image resolution
+  - **Network errors** (if using remote models): Retry with exponential backoff
+  - **Partial batch failure**: Process successful images, log failures, continue
+  - **Image format unsupported**: Try conversion via Pillow, skip if conversion fails
+
+**Error Logging**:
+- All errors logged to processing log file (`ocr_processing_log.md`)
+- Include: timestamp, error type, file affected, error details, action taken (skip/retry/abort)
+- Fatal errors also logged to console/stderr with clear message
+
+**Implementation Requirements**:
+- Try-catch blocks around all critical operations
+- Model loading: Validate before processing begins
+- Image processing: Validate individually, skip on corruption
+- Logging: Structured error entries in markdown log format
+
+### Issue #4: Logging and Observability
+
+**STATUS**: ✅ **STRATEGY DEFINED** - Recommendations approved
+
+**Logging Strategy**:
+- Use Python `logging` module with structured format (JSON)
+- Implement log levels: DEBUG → INFO → WARNING → ERROR → CRITICAL
+- Add processing metrics: images processed, success rate, average time per image
+- Consider adding progress bars using `tqdm` (already in dependencies)
+- Add optional integration with monitoring (if needed in future)
+
+**Implementation Plan**:
+- Processing log: `ocr_processing_log.md` (markdown format for human readability)
+- Technical log: Configurable log file for debugging (if `log_file` specified)
+- Log rotation: Implement file size-based rotation for technical logs
+- Structured logging: Use JSON format for technical logs, markdown for processing log
+
+### Issue #5: Testing Strategy Missing
+
+**Proposed Testing Strategy**:
+
+**Test Structure**:
+- Create `tests/` directory with structure mirroring main code
+- `tests/unit/` - Unit tests for individual modules
+- `tests/integration/` - Integration tests for full pipeline
+- `tests/test_data/` - Sample test images and fixtures
+- `tests/fixtures/` - Test configuration files, mock data
+
+**Test Use Cases** (to be refined by user):
+
+1. **Single Image OCR (v0.1 Core Functionality)**
+   - Input: Single image file (JPG)
+   - Expected: Markdown file with extracted text
+   - Verify: Text is extracted, saved correctly, printed to console
+   - Edge cases: Empty image, image with no text, very large image
+
+2. **Model Loading and Initialization**
+   - Input: Model identifier
+   - Expected: Model loads successfully
+   - Verify: Model is in correct device, processor initialized
+   - Edge cases: Invalid model ID, insufficient GPU memory, network failure (for remote models)
+
+3. **Image Preprocessing**
+   - Input: Various image formats (JPG, PNG, different sizes)
+   - Expected: Images normalized to 896x896, processed correctly
+   - Verify: Format conversion, resizing, normalization
+   - Edge cases: Corrupted files, unsupported formats, extremely large images
+
+4. **Hash-Based Duplicate Detection (v0.2)**
+   - Input: Image with hash matching existing OCR file
+   - Expected: Processing skipped, logged appropriately
+   - Verify: Hash calculation, file pattern matching, logging
+   - Edge cases: Hash collision, non-OCR file with same hash
+
+5. **Error Handling**
+   - Input: Corrupted image file
+   - Expected: Error logged, image skipped, processing continues
+   - Verify: Error logging, graceful degradation
+   - Edge cases: Model loading failure (abort), memory exhaustion
+
+6. **CSV Tracking (v0.2)**
+   - Input: Successful OCR operation
+   - Expected: Entry added to CSV with hash, filename, summary
+   - Verify: CSV format, data accuracy, concurrent writes
+   - Edge cases: CSV file locked, disk full, invalid data
+
+7. **Configuration Management**
+   - Input: Valid/invalid YAML configuration
+   - Expected: Valid config loads, invalid config rejected with clear errors
+   - Verify: Parameter validation, default values, type checking
+   - Edge cases: Missing required fields, invalid types, out-of-range values
+
+8. **Batch Processing**
+   - Input: Directory with multiple images
+   - Expected: All images processed, results saved, progress tracked
+   - Verify: Batch handling, error isolation, progress reporting
+   - Edge cases: Mixed valid/corrupted files, very large batches
+
+9. **Prompt Customization**
+   - Input: Custom OCR prompt in config
+   - Expected: Custom prompt used for inference
+   - Verify: Prompt loaded from config, logged, used in model inference
+   - Edge cases: Empty prompt, very long prompt, special characters
+
+10. **Output Quality**
+    - Input: Image with known text content
+    - Expected: Extracted text matches or is close to known content
+    - Verify: OCR accuracy, text formatting, structure preservation
+    - Edge cases: Handwriting, poor quality scans, multi-language text
+
+**Test Data Requirements**:
+- Sample test images (various formats, qualities, languages)
+- Known-good reference outputs for accuracy testing
+- Corrupted/invalid files for error testing
+- Configuration templates for different scenarios
+
+**Testing Framework**:
+- Use pytest (already in dependencies)
+- Mock model inference for unit tests (avoid loading full model)
+- Integration tests can use small test model or mocked responses
+- Consider golden files for regression testing
+- CI/CD: Run tests on PR, fail on test errors
+
+**Implementation Priority**:
+- Start with use cases #1, #2, #3 for v0.1 (basic functionality)
+- Add use cases #4, #5, #6 for v0.2 (duplicate detection, logging)
+- Expand to remaining use cases as features are implemented
+
+### Issue #6: PDF Processing Details Missing
+
+**STATUS**: 📋 **POST v0.1 TESTING** - User will test PDF processing after v0.1 completion
+
+**Approach** (per user specification):
+- **Testing Plan**: User will test PDF processing using v0.1 prototype once it's completed
+- Attempt to run Gemma 3-12b-it directly on PDF files using the working v0.1 implementation
+- Test if VLM accepts PDF input natively via AutoProcessor
+- Document results and VLM behavior
+- User will provide feedback on VLM PDF capabilities after testing
+- Decision on PDF processing strategy will be made based on test results
+
+**Implementation Options** (to be determined after testing):
+- **If VLM handles PDFs natively**: Use directly, no conversion needed
+- **If VLM requires conversion**: Implement PDF → image conversion workflow
+
+**Future Implementation** (if PDF conversion needed):
+- Add `pdf2image` library for PDF processing
+- Implement PDF → image conversion:
+  - Extract all pages as images
+  - Process each page separately
+  - Combine results or save separately
+- Add configuration: `pdf_dpi`, `pdf_first_page_only` option
+- Consider: Separate workflow for PDFs vs single images
+
+**Action**: After v0.1 completion, user will test PDF processing, then we'll determine the approach based on results
+
+### Issue #7: Concurrent Processing Strategy
+
+**Issue**: Configuration mentions `batch_size` and `max_workers` but:
+- No implementation strategy for concurrent processing
+- No thread safety considerations
+- No resource management strategy
+- No strategy for GPU sharing if multiple workers
+
+**Recommendation**:
+- Use `concurrent.futures.ThreadPoolExecutor` or `ProcessPoolExecutor`
+- Consider: Model loading is expensive - should be shared across workers
+- Implement model singleton pattern for multi-threaded access
+- Add thread-safe CSV writing
+- Consider async/await pattern if using API-based models
+
+### Issue #8: Configuration Validation Missing
+
+**Issue**: Config manager TODO mentions validation but no rules defined.
+
+**Missing Validation For**:
+- Model path/file existence
+- Output directory writability
+- Image format support
+- Parameter ranges (e.g., temperature 0-2, max_tokens > 0)
+- Required vs optional parameters
+- Type validation (e.g., batch_size must be int)
+
+**Recommendation**:
+- Implement `pydantic` models for configuration validation
+- Add schema validation for YAML config
+- Provide clear error messages for invalid config
+- Add `--validate-config` flag to check config without running
+
+---
+
+## Optimizations
+
+### Issue #9: Model Loading Optimization
+
+**Issue**: Model loading is expensive and currently undefined when/how to load.
+
+**Optimizations**:
+- Implement lazy loading: Load model only when needed
+- Add model caching: Keep model in memory between batches
+- Consider model quantization: Use int4/int8 for memory efficiency (already configurable)
+- Add model warm-up: Pre-load model during initialization
+- Consider model offloading for large models (CPU offloading)
+
+**Recommendation**:
+- Create `ModelManager` singleton class
+- Load once, reuse across all processing
+- Add model unload option for memory cleanup
+
+### Issue #10: Image Preprocessing Pipeline Optimization
+
+**Issue**: Multiple preprocessing steps are mentioned but execution order unclear.
+
+**Optimizations**:
+- Optimize preprocessing order (operations that reduce data size first)
+- Cache preprocessed images (if storage allows)
+- Use GPU-accelerated preprocessing where possible (e.g., torchvision transforms)
+- Batch preprocessing operations
+
+**Recommendation**:
+- Pipeline: Load → Validate → Resize → Enhance → Normalize
+- Add preprocessing cache with TTL
+- Measure preprocessing time separately for profiling
+
+### Issue #11: Result Caching Strategy
+
+**Issue**: Hash-based duplicate detection exists but no caching of intermediate results.
+
+**Optimization Opportunities**:
+- Cache model outputs for identical images
+- Cache preprocessed images
+- Cache processor results
+
+**Recommendation**:
+- Implement filesystem-based cache with configurable location
+- Add cache invalidation strategy (TTL, manual clear)
+- Add `--clear-cache` option
+- Consider cache format: JSON for metadata, binary for images
+
+### Issue #12: Memory Management
+
+**Issue**: No strategy for handling large images or out-of-memory scenarios.
+
+**Optimizations**:
+- Implement image chunking for very large images
+- Use generator pattern for batch processing (lazy loading)
+- Add memory monitoring and warnings
+- Implement automatic image downscaling if memory threshold exceeded
+
+**Recommendation**:
+- Add `max_image_size_mb` configuration
+- Implement progressive downscaling if memory issues detected
+- Add memory profiling hooks
+
+### Issue #13: Prompt Engineering for OCR
+
+**Requirement** (per user specification):
+- Make OCR prompt configurable in configuration file
+- Allow users to customize prompt for their specific use cases
+
+**Implementation**:
+- Add `ocr_prompt` field to `config_template.yaml`
+- Default prompt: "Extract all text from this image. Transcribe the text exactly as it appears."
+- Support variable substitution if needed (e.g., for task-specific prompts)
+- Log the prompt used for each OCR operation in the processing log
+
+**Configuration Example**:
+```yaml
+# OCR Parameters
+ocr_prompt: "Extract all text from this image. Transcribe it exactly as it appears."
+# Alternative prompts users might try:
+# ocr_prompt: "What text is shown in this image? Return only the text content."
+# ocr_prompt: "Perform OCR on this image and return all visible text."
+```
+
+**Future Enhancement**:
+- Task-specific prompts (handwriting vs printed, structured vs unstructured)
+- Prompt testing framework to evaluate effectiveness
+- Template library with proven prompts for different scenarios
+
+### Issue #14: Output Quality and Validation
+
+**Issue**: No quality metrics or validation for OCR results.
+
+**Recommendation**:
+- Add confidence scores if model provides them
+- Implement basic quality checks:
+  - Minimum text length (filter empty results)
+  - Character set validation (detect garbled output)
+  - Language detection (optional)
+- Add manual review flag for low-confidence results
+- Consider confidence threshold in configuration
+
+### Issue #15: Pan-and-Scan Implementation Details
+
+**Issue**: Mentioned but no strategy for implementation.
+
+**Current Understanding**: Break large images into overlapping tiles, process each tile, combine results.
+
+**Recommendation**:
+- Define tile size and overlap percentage
+- Implement smart text merging (avoid duplicate text from overlaps)
+- Add tile stitching strategy
+- Consider: OCR context loss when text is split across tiles
+- Add configuration: `pan_scan_tile_size`, `pan_scan_overlap_percent`
+
+### Issue #16: CSV Tracking Optimization
+
+**Issue**: CSV is mentioned but no implementation details for large-scale processing.
+
+**Problems**:
+- CSV appends can be slow with many entries
+- No indexing strategy
+- No query capabilities
+
+**Recommendation**:
+- Use SQLite instead of CSV for better performance (single file, indexed)
+- Or: Use CSV but add periodic sorting/indexing
+- Add: `--rebuild-index` option for CSV optimization
+- Consider: Hybrid approach (SQLite for active processing, CSV export for compatibility)
+
+---
+
+## Security Considerations
+
+### Issue #17: Input Validation and Security
+
+**Missing**:
+- File path validation (prevent path traversal attacks)
+- Image file size limits (prevent DoS)
+- Image format validation (prevent malicious files)
+
+**Recommendation**:
+- Use `pathlib.Path` for safe path handling
+- Validate file extensions and MIME types
+- Set maximum file size limits
+- Sandbox image loading (catch exceptions from image libraries)
+
+### Issue #18: Model Security
+
+**Issues**:
+- Loading arbitrary models from paths could be security risk
+- No validation of model files
+
+**Recommendation**:
+- Validate model file checksums if using local models
+- Use trusted model sources (Hugging Face Hub with verification)
+- Document security considerations for local model files
+
+---
+
+## Documentation Gaps
+
+### Issue #19: Setup Instructions Missing
+
+**Current State**: "To be implemented"
+
+**Required**:
+- Python version requirements
+- System dependencies (CUDA, etc.)
+- UV installation and usage
+- Model download instructions
+- Configuration file creation
+- First-run examples
+
+### Issue #20: Usage Examples Missing
+
+**Current State**: "To be implemented"
+
+**Required**:
+- Command-line examples
+- Python API examples
+- Configuration examples
+- Batch processing examples
+- Integration examples (vault merger)
+
+### Issue #21: Configuration Documentation
+
+**Issue**: `config_template.yaml` has parameters but no explanation.
+
+**Required**:
+- Document each configuration parameter
+- Provide recommended values
+- Explain trade-offs (e.g., batch_size vs memory)
+- Add configuration examples for different use cases (fast vs accurate, local vs remote)
+
+---
+
+## Architectural Improvements
+
+### Issue #22: Separation of Concerns
+
+**Issue**: Some responsibilities overlap between modules.
+
+**Recommendation**:
+- Clarify boundaries:
+  - `image_processor`: Only image I/O and preprocessing
+  - `ocr_engine`: Only model interaction
+  - `result_processor`: Only text post-processing
+  - `main.py`: Only orchestration
+- Avoid: Image processing logic in OCR engine
+- Avoid: Text cleaning in image processor
+
+### Issue #23: Dependency Injection
+
+**Issue**: Modules will likely have tight coupling.
+
+**Recommendation**:
+- Use dependency injection for:
+  - Model instances (allows mocking for testing)
+  - Configuration (allows config overrides)
+  - Logger (allows different log backends)
+- Consider factory pattern for model loading
+
+### Issue #24: Result Format Extensibility
+
+**Issue**: Output format is configurable but implementation not extensible.
+
+**Recommendation**:
+- Create `ResultFormatter` interface/ABC
+- Implement `MarkdownFormatter`, `JSONFormatter`, etc.
+- Use factory pattern for format selection
+- Allow custom formatters via plugin system
+
+---
+
+## Performance Considerations
+
+### Issue #25: Batch Processing Strategy
+
+**Issue**: Batch size mentioned but no strategy for efficient batching.
+
+**Considerations**:
+- Model inference may support variable batch sizes
+- Some models batch better than others
+- Memory constraints vs throughput trade-off
+
+**Recommendation**:
+- Implement adaptive batch sizing (start small, increase if memory allows)
+- Profile different batch sizes for target hardware
+- Add batch size recommendation based on model/hardware
+
+### Issue #26: Progress Reporting
+
+**Issue**: No strategy for progress updates during long-running operations.
+
+**Recommendation**:
+- Use `tqdm` (already in dependencies) for progress bars
+- Add ETA calculations
+- Add per-image progress for batch processing
+- Add optional webhook/notification for completion
+
+---
+
+## Integration Improvements
+
+### Issue #27: Vault Merger Integration Design
+
+**Current State**: Mentioned but undefined.
+
+**Design Proposal**:
+```python
+# In vault_merger main.py, add:
+if config_manager.process_images:
+    from ocr_project import process_vault_images
+    logger.info("=== Phase 7: OCR Processing ===")
+    ocr_results = process_vault_images(
+        vault_path=config_manager.destination_path,
+        config_path=config_manager.ocr_config_path
+    )
+    # OCR results are already saved as markdown files
+    # Link processor will pick them up automatically
+```
+
+**Requirements**:
+- Define `process_vault_images()` API
+- Determine integration point (after merge? after deduplication?)
+- Handle OCR files in link mapping
+- Consider: Should OCR files be excluded from deduplication?
+
+### Issue #28: Error Recovery Integration
+
+**Issue**: No strategy for OCR failures in vault merger context.
+
+**Recommendation**:
+- OCR failures should not block vault merger
+- Log OCR errors separately
+- Provide summary of OCR processing in vault merger report
+- Add flag: `--fail-on-ocr-error` (default: False)
+
+---
+
+## Missing Features
+
+### Issue #29: Image Metadata Preservation
+
+**Issue**: No plan to preserve image metadata (EXIF, creation date, etc.) in markdown output.
+
+**Recommendation**:
+- Extract metadata from images
+- Add metadata frontmatter to generated markdown:
+  ```markdown
+  ---
+  ocr_hash: abc12345
+  source_image: image.jpg
+  processed_date: 2024-01-01
+  image_dimensions: 1920x1080
+  ---
+  [Extracted text]
+  ```
+
+### Issue #30: Language Detection
+
+**Issue**: No strategy for handling multi-language text.
+
+**Recommendation**:
+- Add optional language detection (using `langdetect` library)
+- Add language metadata to results
+- Consider language-specific OCR prompts
+- Add configuration: `detect_language`, `default_language`
+
+### Issue #31: Structured Text Extraction
+
+**Issue**: All text extraction is plain text, no structure preservation.
+
+**Recommendation**:
+- Detect lists, tables, headings in images
+- Preserve structure in markdown output
+- Add configuration: `preserve_structure` flag
+- Consider: This may require specialized models or post-processing
+
+---
+
+## Summary of Priority Recommendations
+
+### Critical (Must Address Before Implementation)
+- **Issue #3**: Error handling strategy - Define categories and recovery mechanisms
+- **Issue #17**: Input validation - Validate file paths, image formats, configuration parameters
+- **Model loading verification** - Test Gemma 3-12b-it can be loaded (part of v0.1)
+
+### High Priority (Address Early)
+- **Issue #5**: Testing framework - Set up tests before implementation
+- **Issue #8**: Configuration validation - Prevent runtime config errors
+- **Issue #13**: Prompt engineering - Design effective OCR prompts for Gemma 3
+- **Issue #19**: Setup documentation - Installation and usage instructions
+- **Issue #20**: Usage examples - Command-line and API examples
+
+### Medium Priority (Important but Not Blocking)
+- **Issue #6**: PDF processing details - User will test PDF support after v0.1 completion, then determine approach
+- **Issue #7**: Concurrent processing - Optimize for throughput
+- **Issue #9**: Model loading optimization - Cache and reuse models
+- **Issue #10**: Image preprocessing optimization - Pipeline efficiency
+- **Issue #12**: Memory management - Handle large images and OOM scenarios
+- **Issue #14**: Output quality validation - Quality checks and metrics
+- **Issue #21**: Configuration documentation - Document all parameters
+- **Issue #22**: Separation of concerns - Clear module boundaries
+- **Issue #25**: Batch processing strategy - Efficient batching
+- **Issue #26**: Progress reporting - User feedback during processing
+
+### Low Priority (Nice to Have)
+- **Issue #11**: Result caching - Cache intermediate results
+- **Issue #15**: Pan-and-scan implementation - High-res image handling
+- **Issue #16**: CSV tracking optimization - Consider SQLite alternative
+- **Issue #23**: Dependency injection - Improve testability
+- **Issue #24**: Result format extensibility - Plugin system for formatters
+- **Issue #29**: Image metadata preservation - EXIF data in output
+- **Issue #30**: Language detection - Multi-language support
+- **Issue #31**: Structured text extraction - Preserve document structure
+
+### Deferred (Per Roadmap)
+- **Issue #1**: Vault merger integration - Planned for v0.5
+- **Issue #27**: Vault merger integration design - Planned for v0.5
+- **Issue #28**: Error recovery integration - Planned for v0.5
+
+### v0.2 Required
+- **Issue #2**: Hash-based duplicate detection - Core feature for v0.2
+- **Issue #4**: Logging and observability - Required for v0.2
+
+---
+
+## Notes
+
+- Resolved issues (model selection, dependencies, documentation) are not listed above.
+- Focus is on actionable items remaining for implementation.
+- See ROADMAP.md for version milestones and planned features.
+- Many optimizations can be deferred until after v0.1 prototype proves the approach.
+

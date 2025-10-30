@@ -3,7 +3,7 @@ OCR Module using Vision Language Models with Transformers library.
 
 This module serves as the main implementation file that will coordinate OCR processing
 using Vision Language Models (VLMs) compatible with the Hugging Face Transformers library.
-The system is designed to work with various models, with Google Gemma 3 (currently 13B 
+The system is designed to work with various models, with Google Gemma 3 (12B 
 instruction-tuned variant) as the primary model based on Hugging Face documentation.
 
 Key responsibilities:
@@ -50,7 +50,7 @@ Key Implementation Details from Hugging Face Documentation:
 
 Configuration options to support:
 - Model selection (any VLM compatible with Transformers)
-- Current model: Google Gemma 3-13b-it (instruction-tuned variant, closest to requested 12B)
+- Current model: Google Gemma 3-12b-it (instruction-tuned variant)
 - Image processing parameters (size, enhancement, etc.)
 - Inference parameters (temperature, max tokens, etc.)
 - Output format (plain text, structured, etc.)

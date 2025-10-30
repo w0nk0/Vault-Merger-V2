@@ -9,8 +9,8 @@ description = "OCR project using Vision Language Models with Transformers"
 authors = [
     {name = "OCR Project Team"}
 ]
-readme = "README.md"
-requires-python = ">=3.8"
+readme = "docs/README.md"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -24,16 +24,23 @@ classifiers = [
     "Topic :: Text Processing :: Linguistic",
 ]
 dependencies = [
-    "transformers>=4.36.0",
-    "torch>=2.0.0",
-    "pillow>=10.0.0",
-    "numpy>=1.24.0",
-    "opencv-python>=4.8.0",
+    # Core vision language model dependencies
+    # NOTE: llama-cpp-python should be installed with CUDA wheel:
+    # uv pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+    # Do not add to dependencies to avoid building from source
+    # "llama-cpp-python>=0.2.0",  # Install manually with CUDA wheel
+    
+    # Image processing
+    "pillow>=10.0.0",  # Highest version from pyproject.toml (10.0.0 > 8.0.0)
+    
+    # Numerical operations
+    "numpy>=1.24.0",  # Highest version from pyproject.toml (1.24.0 > 1.21.0)
+    
+    # Configuration and utilities
     "pyyaml>=6.0",
     "pandas>=2.0.0",
     "tqdm>=4.65.0",
     "click>=8.1.0",
-    "llama-cpp-python>=0.2.0",  # For GGUF model support
 ]
 
 [project.optional-dependencies]
