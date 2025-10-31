@@ -305,7 +305,7 @@ def process_single_image(input_path, ocr_engine, image_processor, csv_tracker, p
                                 vprint(f"  ⏭️  Filtering consecutive number sequence artifact from tile {i+1}")
                                 continue
                         
-                        tile_texts.append((x, y, tile_text))
+                    tile_texts.append((x, y, tile_text))
                         
             except Exception as e:
                 vprint(f"  ⚠️  Warning: Failed to process tile {i+1}: {str(e)}")
@@ -456,7 +456,9 @@ def main():
     
     # Generate structured prompt if template is provided
     if json_template:
-        ocr_prompt = json_template.generate_prompt(ocr_prompt)
+        # If using template with a custom prompt, prepend it. Otherwise just use template prompt.
+        base_prompt = ocr_prompt if args.prompt else None
+        ocr_prompt = json_template.generate_prompt(base_prompt)
     
     # Expand input pattern to list of files
     try:
@@ -513,7 +515,8 @@ def main():
                     device=args.device,
                     temperature=DEFAULT_TEMPERATURE,
                     max_new_tokens=DEFAULT_MAX_NEW_TOKENS,
-                    do_sample=DEFAULT_DO_SAMPLE
+                    do_sample=DEFAULT_DO_SAMPLE,
+                    verbose=VERBOSE
                 )
         except Exception as e:
             error_msg = f"Model loading failed: {str(e)}"
