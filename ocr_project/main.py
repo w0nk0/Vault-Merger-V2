@@ -21,6 +21,24 @@ import json
 import glob
 from pathlib import Path
 
+# Import OCR modules at module level
+try:
+    from ocr_project.image_processor import ImagePreprocessor
+    from ocr_project.ocr_engine import VisionOCREngine
+    from ocr_project.hash_manager import calculate_image_hash, check_duplicate
+    from ocr_project.csv_tracker import CSVTracker
+    from ocr_project.processing_log import ProcessingLog
+except ImportError:
+    # Fall back to relative imports (when running from within ocr_project)
+    from image_processor import ImagePreprocessor
+    try:
+        from ocr_engine import VisionOCREngine
+    except ImportError:
+        VisionOCREngine = None
+    from hash_manager import calculate_image_hash, check_duplicate
+    from csv_tracker import CSVTracker
+    from processing_log import ProcessingLog
+
 # Hardcoded defaults per v0.1 spec
 DEFAULT_TEMPERATURE = 0.1
 DEFAULT_MAX_NEW_TOKENS = 1024
@@ -455,23 +473,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     
     try:
-        # Import modules
-        try:
-            from ocr_project.image_processor import ImagePreprocessor
-            from ocr_project.ocr_engine import VisionOCREngine
-            from ocr_project.hash_manager import calculate_image_hash, check_duplicate
-            from ocr_project.csv_tracker import CSVTracker
-            from ocr_project.processing_log import ProcessingLog
-        except ImportError:
-            from image_processor import ImagePreprocessor
-            try:
-                from ocr_engine import VisionOCREngine
-            except ImportError:
-                VisionOCREngine = None
-            from hash_manager import calculate_image_hash, check_duplicate
-            from csv_tracker import CSVTracker
-            from processing_log import ProcessingLog
-        
+        # Modules are now imported at module level
         # Initialize tracking and logging
         csv_tracker = CSVTracker(output_dir / "ocr_results.csv")
         processing_log = ProcessingLog(output_dir / "ocr_processing_log.md")
