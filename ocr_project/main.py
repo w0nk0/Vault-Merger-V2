@@ -227,26 +227,32 @@ def process_single_image(input_path, ocr_engine, image_processor, csv_tracker, p
             vprint(f"  Original size: {original_size[0]}x{original_size[1]}")
             
             # Check if image needs tiling
-            is_large = image_processor.is_large_image(image)
-            
-            if is_large:
-                vprint(f"  Large image detected ({original_size[0]}x{original_size[1]})")
-                # Try Hugging Face AutoProcessor pan-and-scan first
-                vprint(f"  Attempting to use Hugging Face pan-and-scan...")
-                hf_tiles = image_processor.create_tiles_with_hf_pan_scan(str(input_path), model_name)
-                
-                if hf_tiles is not None:
-                    vprint(f"  ✅ Using Hugging Face pan-and-scan tiles")
-                    tiles = [(tile, (0, 0)) for tile in hf_tiles]
-                else:
-                    vprint(f"  Using manual tiling strategy (fallback)")
-                    tiles = image_processor.create_tiles(image, tile_size=(896, 896), overlap=0.1)
-                    
-                vprint(f"  Created {len(tiles)} tiles")
-            else:
-                # For smaller images, just resize with aspect ratio preservation
+            # JSON template mode requires whole image, not tiles
+            if json_template is not None:
+                vprint(f"  JSON template mode: Processing whole image (no tiling)")
                 preprocessed_image = image_processor.preprocess(image)
                 tiles = [(preprocessed_image, (0, 0))]
+            else:
+                is_large = image_processor.is_large_image(image)
+                
+                if is_large:
+                    vprint(f"  Large image detected ({original_size[0]}x{original_size[1]})")
+                    # Try Hugging Face AutoProcessor pan-and-scan first
+                    vprint(f"  Attempting to use Hugging Face pan-and-scan...")
+                    hf_tiles = image_processor.create_tiles_with_hf_pan_scan(str(input_path), model_name)
+                    
+                    if hf_tiles is not None:
+                        vprint(f"  ✅ Using Hugging Face pan-and-scan tiles")
+                        tiles = [(tile, (0, 0)) for tile in hf_tiles]
+                    else:
+                        vprint(f"  Using manual tiling strategy (fallback)")
+                        tiles = image_processor.create_tiles(image, tile_size=(896, 896), overlap=0.1)
+                        
+                    vprint(f"  Created {len(tiles)} tiles")
+                else:
+                    # For smaller images, just resize with aspect ratio preservation
+                    preprocessed_image = image_processor.preprocess(image)
+                    tiles = [(preprocessed_image, (0, 0))]
                 
         except Exception as e:
             # Corrupted image - log and skip
