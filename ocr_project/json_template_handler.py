@@ -137,6 +137,12 @@ class JSONTemplateHandler:
         """
         import re
         
+        # Remove conversational artifacts (USER:, ASSISTANT:, etc.)
+        # Common patterns from model output
+        text = re.sub(r'^\s*USER:\s*\n?', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\s*ASSISTANT:\s*\n?', '', text, flags=re.MULTILINE)
+        text = re.sub(r'USER:\s*ASSISTANT:', '', text)
+        
         # Try to extract JSON from markdown code block
         json_match = re.search(r'```json\s*\n(.*?)\n```', text, re.DOTALL)
         if json_match:

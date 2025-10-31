@@ -167,7 +167,7 @@ def _expand_input_pattern(input_pattern):
 
 
 def process_single_image(input_path, ocr_engine, image_processor, csv_tracker, processing_log, 
-                         output_dir, ocr_prompt, json_template, model_format, args):
+                         output_dir, ocr_prompt, json_template, model_format, args, model_name):
     """
     Process a single image through the OCR pipeline.
     
@@ -233,7 +233,7 @@ def process_single_image(input_path, ocr_engine, image_processor, csv_tracker, p
                 vprint(f"  Large image detected ({original_size[0]}x{original_size[1]})")
                 # Try Hugging Face AutoProcessor pan-and-scan first
                 vprint(f"  Attempting to use Hugging Face pan-and-scan...")
-                hf_tiles = image_processor.create_tiles_with_hf_pan_scan(str(input_path))
+                hf_tiles = image_processor.create_tiles_with_hf_pan_scan(str(input_path), model_name)
                 
                 if hf_tiles is not None:
                     vprint(f"  ✅ Using Hugging Face pan-and-scan tiles")
@@ -536,7 +536,7 @@ def main():
             result = process_single_image(
                 input_file, ocr_engine, image_processor, csv_tracker, 
                 processing_log, output_dir, ocr_prompt, json_template, 
-                model_format, args
+                model_format, args, args.model
             )
             
             if result:
