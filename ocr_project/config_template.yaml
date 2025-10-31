@@ -22,6 +22,7 @@ image_resize_height: 896
 contrast_enhancement: true
 noise_reduction: true
 do_pan_and_scan: true  # Enable for high-resolution images
+min_image_size_pixels: 40000  # Minimum total pixels (width * height) to process (default: 200x200 = 40000)
 
 # Hash and Duplicate Detection
 hash_algorithm: "sha256"
@@ -33,7 +34,8 @@ filename_format: "{original_name}_OCR_{hash}.md"  # Format with OCR_ prefix
 # CSV Tracking (as per RULES.md)
 csv_tracking_enabled: true
 csv_filename: "ocr_results.csv"
-csv_path: "."  # Relative to vault main directory
+csv_path: ".obsidian"  # Path to CSV index file (relative to vault root, default: ".obsidian")
+csv_json_summary_field: "summary"  # JSON field name to use for CSV summary (default: "summary")
 
 # Output
 output_format: "markdown"  # or "json"

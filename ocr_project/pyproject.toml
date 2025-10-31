@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ocr_vlm"
-version = "0.1.0"
+version = "0.2.5"
 description = "OCR project using Vision Language Models with Transformers"
 authors = [
     {name = "OCR Project Team"}
@@ -32,6 +32,9 @@ dependencies = [
     
     # Image processing
     "pillow>=10.0.0",  # Highest version from pyproject.toml (10.0.0 > 8.0.0)
+    
+    # PDF processing
+    "pdf2image>=1.16.0",  # Convert PDF pages to images
     
     # Numerical operations
     "numpy>=1.24.0",  # Highest version from pyproject.toml (1.24.0 > 1.21.0)

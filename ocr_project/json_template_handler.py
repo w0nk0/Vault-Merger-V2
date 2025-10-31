@@ -12,16 +12,33 @@ from typing import Dict, Any, Optional
 class JSONTemplateHandler:
     """Handles JSON schema templates for structured OCR extraction."""
     
-    def __init__(self, template_path: str):
+    def __init__(self, template_path: str, result_template_path: Optional[str] = None):
         """
         Initialize with a JSON schema file.
         
         Args:
             template_path: Path to JSON schema file
+            result_template_path: Optional path to markdown template for formatting results (e.g., json2result.template.md).
+                                  If None, auto-detects json2result.template.md in the same directory as template_path.
         """
         self.template_path = Path(template_path)
+        
+        # Auto-detect result template if not provided
+        if result_template_path is None:
+            # Look for json2result.template.md in the same directory as the JSON template
+            auto_template = self.template_path.parent / "json2result.template.md"
+            if auto_template.exists():
+                self.result_template_path = auto_template
+            else:
+                self.result_template_path = None
+        else:
+            self.result_template_path = Path(result_template_path) if result_template_path else None
+        
+        self.result_template = None
         self.schema = None
         self._load_schema()
+        if self.result_template_path:
+            self._load_result_template()
     
     def _load_schema(self):
         """Load JSON schema from file."""
@@ -32,6 +49,18 @@ class JSONTemplateHandler:
             # Use --verbose to see it
         except Exception as e:
             raise Exception(f"Failed to load JSON schema: {str(e)}")
+    
+    def _load_result_template(self):
+        """Load markdown template for formatting JSON results."""
+        if not self.result_template_path or not self.result_template_path.exists():
+            self.result_template = None
+            return
+        
+        try:
+            with open(self.result_template_path, 'r', encoding='utf-8') as f:
+                self.result_template = f.read()
+        except Exception as e:
+            raise Exception(f"Failed to load result template: {str(e)}")
     
     def generate_prompt(self, base_prompt: Optional[str] = None) -> str:
         """
@@ -242,17 +271,78 @@ class JSONTemplateHandler:
     
     def get_output_extension(self) -> str:
         """Get file extension for structured output."""
+        # If using a markdown template, return .md, otherwise .json
+        if self.result_template:
+            return '.md'
         return '.json'
     
     def format_output(self, data: Dict[str, Any]) -> str:
         """
-        Format JSON data for output file.
+        Format JSON data for output file using template if available.
+        
+        If a result template is loaded, it uses %fieldname% placeholders.
+        Otherwise, returns formatted JSON.
         
         Args:
             data: Validated JSON data
             
         Returns:
-            Formatted JSON string
+            Formatted string (markdown template or JSON)
         """
+        # If we have a result template, use it
+        if self.result_template:
+            return self._apply_template(self.result_template, data)
+        
+        # Default: return formatted JSON
         return json.dumps(data, indent=2, ensure_ascii=False)
+    
+    def _apply_template(self, template: str, data: Dict[str, Any]) -> str:
+        """
+        Apply data to template with %fieldname% placeholders.
+        
+        Args:
+            template: Template string with %fieldname% placeholders
+            data: JSON data dictionary
+            
+        Returns:
+            Template with placeholders replaced by data values
+        """
+        import re
+        
+        result = template
+        
+        # Replace %fieldname% with values from data
+        # Support nested fields like %fieldname.subfield%
+        def replace_placeholder(match):
+            field_path = match.group(1)  # Get field name without %
+            
+            # Handle nested fields (e.g., %obj.field%)
+            parts = field_path.split('.')
+            value = data
+            for part in parts:
+                if isinstance(value, dict) and part in value:
+                    value = value[part]
+                else:
+                    return ''  # Field not found, return empty string
+            
+            # Format value based on type
+            if value is None:
+                return ''
+            elif isinstance(value, list):
+                # Join array items with newlines or commas
+                if all(isinstance(item, str) for item in value):
+                    return '\n'.join(str(item) for item in value)
+                else:
+                    return ', '.join(str(item) for item in value)
+            elif isinstance(value, dict):
+                # For nested objects, format as JSON
+                return json.dumps(value, indent=2, ensure_ascii=False)
+            else:
+                return str(value)
+        
+        # Match %fieldname% or %fieldname.subfield% patterns
+        pattern = r'%([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)*)%'
+        result = re.sub(pattern, replace_placeholder, result)
+        
+        return result
 

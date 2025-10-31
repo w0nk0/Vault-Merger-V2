@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ocr_vlm",
-    version="0.1.0",
+    version="0.2.5",
     packages=find_packages(),
     # Dependencies are managed in pyproject.toml
     # Use: uv sync (or: pip install -e .) to install dependencies

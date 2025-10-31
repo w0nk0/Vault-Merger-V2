@@ -15,9 +15,15 @@ import warnings
 class ImagePreprocessor:
     """Handles image loading and preprocessing for OCR."""
     
-    def __init__(self):
-        """Initialize the image preprocessor."""
+    def __init__(self, min_size_pixels=40000):
+        """
+        Initialize the image preprocessor.
+        
+        Args:
+            min_size_pixels: Minimum total pixels (width * height) required for processing (default: 40000 = 200x200)
+        """
         self.target_size = (896, 896)  # Gemma 3 requirement
+        self.min_size_pixels = min_size_pixels  # Minimum total pixels
     
     def load_image(self, image_path):
         """
@@ -73,16 +79,31 @@ class ImagePreprocessor:
     
     def is_large_image(self, image):
         """
-        Check if image is larger than 896x896.
+        Check if image is larger than target size.
         
         Args:
             image: PIL.Image
             
         Returns:
-            bool: True if image is larger than 896x896
+            bool: True if image is larger than target size
         """
         width, height = image.size
-        return width > 896 or height > 896
+        target_width, target_height = self.target_size
+        return width > target_width or height > target_height
+    
+    def is_too_small(self, image):
+        """
+        Check if image is too small to process (below minimum pixel threshold).
+        
+        Args:
+            image: PIL.Image
+            
+        Returns:
+            bool: True if image is below minimum size (should be skipped)
+        """
+        width, height = image.size
+        total_pixels = width * height
+        return total_pixels < self.min_size_pixels
     
     def is_mostly_blank(self, image, threshold=0.99):
         """
@@ -157,43 +178,69 @@ class ImagePreprocessor:
             warnings.warn(f"Failed to use Hugging Face pan-and-scan: {str(e)}. Using manual tiling.")
             return None
     
-    def create_tiles(self, image, tile_size=(896, 896), overlap=0.1):
+    def create_tiles(self, image, tile_size=None, overlap=0.1):
         """
-        Split large image into overlapping tiles for processing (manual fallback).
+        Split large image into vertical strips (straightforward pan-and-scan approach).
         
-        This is used when Hugging Face AutoProcessor pan-and-scan is not available.
+        Strategy:
+        1. Pick the shorter side of the document
+        2. Scale the image so the shorter side becomes model max width
+        3. Create vertical strips by sliding only through Y axis (not X)
+        
+        This approach solves 90% of cases without compromising quality.
         
         Args:
             image: PIL.Image to tile
-            tile_size: Tuple (width, height) for each tile
+            tile_size: Tuple (width, height) for each tile (optional, uses self.target_size if not provided)
             overlap: Overlap percentage between tiles (0.0 to 1.0)
             
         Returns:
             list: List of (tile_image, (x, y)) tuples
         """
-        width, height = image.size
+        # Use target_size from class or provided tile_size
+        if tile_size is None:
+            tile_size = self.target_size
         tile_width, tile_height = tile_size
-        overlap_pixels_x = int(tile_width * overlap)
+        
+        original_width, original_height = image.size
+        
+        # Step 1: Pick the shorter side
+        shorter_side = min(original_width, original_height)
+        
+        # Step 2: Scale image so shorter side becomes model max width
+        scale_factor = float(tile_width) / shorter_side
+        new_width = int(original_width * scale_factor)
+        new_height = int(original_height * scale_factor)
+        
+        # Resize image with high-quality resampling
+        scaled_image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Step 3: Create vertical strips (full width) sliding only through Y axis
         overlap_pixels_y = int(tile_height * overlap)
         
+        width, height = scaled_image.size
         tiles = []
+        
+        # Ensure width matches tile_width (should match after scaling, but handle edge cases)
+        if width > tile_width:
+            # If width is still larger than tile_width (edge case for landscape), crop/center
+            # This shouldn't happen with proper scaling, but handle it safely
+            start_x = (width - tile_width) // 2
+            scaled_image = scaled_image.crop((start_x, 0, start_x + tile_width, height))
+            width = tile_width
+        
+        # Only slide through Y axis (x is always 0, width is always tile_width)
         y = 0
         while y < height:
-            x = 0
-            while x < width:
-                # Calculate tile bounds
-                right = min(x + tile_width, width)
-                bottom = min(y + tile_height, height)
-                
-                # Extract tile
-                tile = image.crop((x, y, right, bottom))
-                tiles.append((tile, (x, y)))
-                
-                # Move to next tile (with overlap)
-                x += tile_width - overlap_pixels_x
-                if x >= width:
-                    break
+            # Calculate tile bounds (always full width, variable height at edges)
+            right = min(tile_width, width)
+            bottom = min(y + tile_height, height)
             
+            # Extract tile
+            tile = scaled_image.crop((0, y, right, bottom))
+            tiles.append((tile, (0, y)))
+            
+            # Move to next tile along Y axis (with overlap)
             y += tile_height - overlap_pixels_y
             if y >= height:
                 break

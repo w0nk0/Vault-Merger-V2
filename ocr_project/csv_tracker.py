@@ -1,7 +1,8 @@
 """
-CSV Tracker for v0.2 - Track processed images in CSV file.
+CSV Tracker for v0.2 - Index of processed OCR documents.
 
-Per RULES.md specifications: columns are hash, filename, summary.
+This is an index (not a log) where each OCR'd document appears only once.
+Columns: source_filename, results_filename, summary
 """
 
 import csv
@@ -11,7 +12,7 @@ from datetime import datetime
 
 
 class CSVTracker:
-    """Tracks OCR processing results in CSV file."""
+    """Tracks OCR processing results in CSV index file."""
     
     def __init__(self, csv_path):
         """
@@ -31,27 +32,59 @@ class CSVTracker:
         """Create CSV file with headers."""
         with open(self.csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['hash', 'filename', 'summary'])
+            writer.writerow(['source_filename', 'results_filename', 'summary'])
     
-    def add_entry(self, hash_value, filename, summary):
+    def add_entry(self, source_filename, results_filename, summary):
         """
-        Add entry to CSV.
+        Add or update entry in CSV index.
+        
+        This ensures each document appears only once (by source filename).
+        If entry exists, it updates it; otherwise adds new entry.
         
         Args:
-            hash_value: 8-character hash
-            filename: Original image filename
-            summary: Brief summary/description (first 100 chars of text)
+            source_filename: Original source file path/name
+            results_filename: Output OCR results file name
+            summary: Document summary (extracted from document if available)
         """
-        # Truncate summary to reasonable length
-        summary_short = summary[:100] if summary else ""
+        # Read existing entries
+        entries = {}
+        source_to_row = {}
         
-        with open(self.csv_path, 'a', newline='', encoding='utf-8') as f:
+        if self.csv_path.exists():
+            with open(self.csv_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    src = row.get('source_filename', '')
+                    if src:
+                        entries[src] = row
+                        source_to_row[src] = len(entries) - 1
+        
+        # Update or add entry
+        source_str = str(source_filename)
+        entries[source_str] = {
+            'source_filename': source_str,
+            'results_filename': str(results_filename),
+            'summary': str(summary) if summary else ""
+        }
+        
+        # Write all entries back (this maintains the index - one entry per document)
+        with open(self.csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow([hash_value, filename, summary_short])
+            writer.writerow(['source_filename', 'results_filename', 'summary'])
+            # Write entries sorted by source filename for consistency
+            for src in sorted(entries.keys()):
+                row = entries[src]
+                writer.writerow([
+                    row['source_filename'],
+                    row['results_filename'],
+                    row['summary']
+                ])
     
     def get_all_hashes(self):
         """
-        Get all hashes currently in CSV.
+        Get all hashes currently in CSV (for backward compatibility).
+        
+        Note: This extracts hash from results_filename which follows pattern *_OCR_{hash}.*
         
         Returns:
             set: Set of hash strings
@@ -64,8 +97,36 @@ class CSVTracker:
         with open(self.csv_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                if 'hash' in row:
-                    hashes.add(row['hash'].lower())
+                results_fn = row.get('results_filename', '')
+                # Extract hash from filename pattern: *_OCR_{hash}.{ext}
+                if '_OCR_' in results_fn:
+                    parts = results_fn.split('_OCR_')
+                    if len(parts) >= 2:
+                        hash_part = parts[1].split('.')[0]
+                        if len(hash_part) == 8:  # 8-character hash
+                            hashes.add(hash_part.lower())
         
         return hashes
+    
+    def entry_exists(self, source_filename):
+        """
+        Check if an entry exists for the given source filename.
+        
+        Args:
+            source_filename: Source file path/name to check
+            
+        Returns:
+            bool: True if entry exists
+        """
+        if not self.csv_path.exists():
+            return False
+        
+        source_str = str(source_filename)
+        with open(self.csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row.get('source_filename', '') == source_str:
+                    return True
+        
+        return False
 
