@@ -162,6 +162,8 @@ class JSONTemplateHandler:
             return parsed
         except json.JSONDecodeError as e:
             print(f"⚠️  Failed to parse JSON: {e}")
+            # Debug: Show what we're trying to parse
+            print(f"⚠️  Attempted to parse: {repr(json_text[:200])}")
             return None
     
     def validate(self, data: Dict[str, Any]) -> tuple[bool, Optional[str]]:

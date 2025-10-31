@@ -350,6 +350,9 @@ Extracted text:
         
         if is_json_mode:
             vprint("Extracting JSON from output...")
+            if VERBOSE:
+                print(f"  Raw extracted text length: {len(extracted_text)}")
+                print(f"  Preview: {extracted_text[:300]}")
             json_data = json_template.extract_json(extracted_text)
             
             if json_data:
