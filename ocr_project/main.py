@@ -23,12 +23,22 @@ DEFAULT_MAX_NEW_TOKENS = 1024
 DEFAULT_DO_SAMPLE = False
 DEFAULT_PROMPT = "Extract and transcribe all visible text from this image."
 
+# Global verbose flag
+VERBOSE = False
+
+
+def vprint(*args, **kwargs):
+    """Print only if verbose mode is enabled."""
+    if VERBOSE:
+        print(*args, **kwargs)
+
 
 def parse_arguments():
     """Parse command-line arguments for v0.2."""
     parser = argparse.ArgumentParser(
         description="OCR v0.2: Single file OCR processing with duplicate detection and tracking"
     )
+    global VERBOSE
     parser.add_argument(
         "--model",
         required=True,
@@ -61,8 +71,16 @@ def parse_arguments():
         default=None,
         help="Path to JSON schema template file for structured extraction"
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output (model details, inference info, etc.)"
+    )
     
-    return parser.parse_args()
+    args = parser.parse_args()
+    global VERBOSE
+    VERBOSE = args.verbose
+    return args
 
 
 def _detect_model_format(model_path):
@@ -101,7 +119,7 @@ def main():
     
     # Detect model format
     model_format = _detect_model_format(args.model)
-    print(f"Detected model format: {model_format}")
+    vprint(f"Detected model format: {model_format}")
     
     # Handle JSON template if provided
     json_template = None
@@ -115,7 +133,7 @@ def main():
                 raise ImportError("Cannot import JSONTemplateHandler. Make sure json_template_handler.py exists.")
         
         json_template = JSONTemplateHandler(args.template)
-        print(f"✓ Using JSON template: {args.template}")
+        vprint(f"✓ Using JSON template: {args.template}")
     
     # Use custom prompt if provided, otherwise use default
     ocr_prompt = args.prompt if args.prompt else DEFAULT_PROMPT
@@ -158,9 +176,9 @@ def main():
         processing_log = ProcessingLog(output_dir / "ocr_processing_log.md")
         
         # v0.2: Calculate hash for duplicate detection
-        print(f"Calculating hash for: {args.input}")
+        vprint(f"Calculating hash for: {args.input}")
         image_hash = calculate_image_hash(str(input_path))
-        print(f"  Hash: {image_hash}")
+        vprint(f"  Hash: {image_hash}")
         
         # v0.2: Check for duplicates
         duplicate_check = check_duplicate(image_hash, output_dir)
@@ -196,30 +214,30 @@ def main():
         image_processor = ImagePreprocessor()
         
         # Load and preprocess image
-        print(f"Loading image: {args.input}")
+        vprint(f"Loading image: {args.input}")
         try:
             image = image_processor.load_image(str(input_path))
             original_size = image.size
-            print(f"  Original size: {original_size[0]}x{original_size[1]}")
+            vprint(f"  Original size: {original_size[0]}x{original_size[1]}")
             
             # Check if image needs tiling
             is_large = image_processor.is_large_image(image)
             
             if is_large:
-                print(f"  Large image detected ({original_size[0]}x{original_size[1]})")
+                vprint(f"  Large image detected ({original_size[0]}x{original_size[1]})")
                 # Try Hugging Face AutoProcessor pan-and-scan first
-                print(f"  Attempting to use Hugging Face pan-and-scan...")
+                vprint(f"  Attempting to use Hugging Face pan-and-scan...")
                 hf_tiles = image_processor.create_tiles_with_hf_pan_scan(str(input_path))
                 
                 if hf_tiles is not None:
-                    print(f"  ✅ Using Hugging Face pan-and-scan tiles")
+                    vprint(f"  ✅ Using Hugging Face pan-and-scan tiles")
                     tiles = [(tile, (0, 0)) for tile in hf_tiles]  # HF provides images, positions handled internally
                 else:
-                    print(f"  Using manual tiling strategy (fallback)")
+                    vprint(f"  Using manual tiling strategy (fallback)")
                     # Fallback to manual tiling
                     tiles = image_processor.create_tiles(image, tile_size=(896, 896), overlap=0.1)
                     
-                print(f"  Created {len(tiles)} tiles")
+                vprint(f"  Created {len(tiles)} tiles")
             else:
                 # For smaller images, just resize with aspect ratio preservation
                 preprocessed_image = image_processor.preprocess(image)
@@ -233,7 +251,7 @@ def main():
             sys.exit(1)
         
         # Initialize OCR engine based on detected format
-        print(f"Loading model: {args.model}")
+        vprint(f"Loading model: {args.model}")
         try:
             if model_format == "transformers":
                 # Import Transformers engine
@@ -286,19 +304,19 @@ def main():
             # Use a clean extraction-only prompt
             extraction_prompt = DEFAULT_PROMPT  # "Extract and transcribe all visible text from this image."
             generate_summary = True
-            print("  ℹ️  Summary requested - will generate from combined text after extraction")
+            vprint("  ℹ️  Summary requested - will generate from combined text after extraction")
         
         # Extract text from each tile and combine
-        print("Extracting text from image...")
+        vprint("Extracting text from image...")
         tile_texts = []
         
         for i, (tile_image, (x, y)) in enumerate(tiles):
             if len(tiles) > 1:
-                print(f"  Processing tile {i+1}/{len(tiles)} (position: {x},{y})...")
+                vprint(f"  Processing tile {i+1}/{len(tiles)} (position: {x},{y})...")
             
             # Skip mostly blank tiles (edge tiles with no content)
             if len(tiles) > 1 and image_processor.is_mostly_blank(tile_image):
-                print(f"  ⏭️  Skipping mostly blank tile {i+1} (position: {x},{y})")
+                vprint(f"  ⏭️  Skipping mostly blank tile {i+1} (position: {x},{y})")
                 continue
             
             try:
@@ -362,7 +380,7 @@ def main():
         
         # Generate summary from combined text if requested
         if generate_summary and extracted_text.strip():
-            print("\nGenerating summary from combined text...")
+            vprint("\nGenerating summary from combined text...")
             try:
                 # Create a text-only summary prompt
                 summary_prompt = f"""Based on the following extracted text from a document, create a summary section starting with "## SUMMARY ##" that summarizes the purpose and content of the document in one or two sentences.
@@ -381,7 +399,7 @@ Extracted text:
                 
                 # Append summary to extracted text
                 extracted_text = f"{extracted_text}\n\n{summary_text}"
-                print("  ✅ Summary generated")
+                vprint("  ✅ Summary generated")
             except Exception as e:
                 print(f"  ⚠️  Warning: Failed to generate summary: {str(e)}")
                 # Continue without summary
@@ -391,17 +409,17 @@ Extracted text:
         json_data = None
         
         if is_json_mode:
-            print("Extracting JSON from output...")
+            vprint("Extracting JSON from output...")
             json_data = json_template.extract_json(extracted_text)
             
             if json_data:
-                print("  ✓ JSON extracted successfully")
+                vprint("  ✓ JSON extracted successfully")
                 
                 # Validate JSON against schema
                 is_valid, error_msg = json_template.validate(json_data)
                 
                 if is_valid:
-                    print("  ✅ JSON validated against schema")
+                    vprint("  ✅ JSON validated against schema")
                 else:
                     print(f"  ⚠️  JSON validation warning: {error_msg}")
                     print("  Continuing anyway...")

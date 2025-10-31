@@ -28,7 +28,8 @@ class JSONTemplateHandler:
         try:
             with open(self.template_path, 'r', encoding='utf-8') as f:
                 self.schema = json.load(f)
-            print(f"✓ Loaded JSON schema from: {self.template_path}")
+            # Note: Load confirmation message removed for cleaner output
+            # Use --verbose to see it
         except Exception as e:
             raise Exception(f"Failed to load JSON schema: {str(e)}")
     
