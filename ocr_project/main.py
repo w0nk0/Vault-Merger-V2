@@ -266,11 +266,13 @@ def process_single_image(input_path, ocr_engine, image_processor, csv_tracker, p
         generate_summary = False
         
         # Check if prompt asks for summary
-        summary_keywords = ['summary', 'summarize', 'summarise', '## SUMMARY', 'SUMMARY ##']
-        if any(keyword.lower() in ocr_prompt.lower() for keyword in summary_keywords):
-            extraction_prompt = DEFAULT_PROMPT
-            generate_summary = True
-            vprint("  ℹ️  Summary requested - will generate from combined text after extraction")
+        # Don't trigger summary mode if using JSON template (templates often have "summary" as a field)
+        if json_template is None:
+            summary_keywords = ['summary', 'summarize', 'summarise', '## SUMMARY', 'SUMMARY ##']
+            if any(keyword.lower() in ocr_prompt.lower() for keyword in summary_keywords):
+                extraction_prompt = DEFAULT_PROMPT
+                generate_summary = True
+                vprint("  ℹ️  Summary requested - will generate from combined text after extraction")
         
         # Extract text from each tile and combine
         vprint("Extracting text from image...")
